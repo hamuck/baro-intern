@@ -10,13 +10,18 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 public class SecurityConfig {
 
 	private final JwtFilter jwtFilter;
 
-	public SecurityConfig(JwtFilter jwtFilter){
+	public SecurityConfig(JwtFilter jwtFilter) {
 		this.jwtFilter = jwtFilter;
 	}
 
@@ -24,22 +29,28 @@ public class SecurityConfig {
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http
 			.csrf(csrf -> csrf.disable()) // CSRF 보호 비활성화
+			.cors(cors -> cors.configurationSource(corsConfigurationSource())) // CORS 설정 적용
 			.authorizeHttpRequests(auth -> auth
-				.requestMatchers("/login", "/signup", "/swagger-ui/**", "/v3/api-docs/**", "/health-check")
-				.permitAll()
-				.anyRequest()
-				.authenticated()) // 그 외 모든 요청은 인증 필요
-			.sessionManagement(session -> session
-				.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // JWT를 사용하므로 세션 비활성화
-			.formLogin(form -> form.disable()) // 기본 폼 로그인 비활성화
-			.httpBasic(httpBasic -> httpBasic.disable()) // HTTP Basic 인증 비활성화
-			.addFilterBefore(jwtFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class); // JWT 필터를 인증 필터 앞에 추가
+				.requestMatchers(
+					"/",
+					"/login",
+					"/signup",
+					"/swagger-ui/**",
+					"/v3/api-docs/**",
+					"/health-check"
+				).permitAll()
+				.anyRequest().authenticated()
+			)
+			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+			.formLogin(form -> form.disable())
+			.httpBasic(httpBasic -> httpBasic.disable())
+			.addFilterBefore(jwtFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
 
 		return http.build();
 	}
 
 	@Bean
-	public PasswordEncoder passwordEncoder(){
+	public PasswordEncoder passwordEncoder() {
 		return new BCryptPasswordEncoder();
 	}
 
@@ -47,5 +58,20 @@ public class SecurityConfig {
 	public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig)
 		throws Exception {
 		return authConfig.getAuthenticationManager();
+	}
+
+	@Bean
+	public CorsConfigurationSource corsConfigurationSource() {
+		CorsConfiguration configuration = new CorsConfiguration();
+		configuration.setAllowedOrigins(List.of("*"));
+		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+		configuration.setAllowedHeaders(List.of("*"));
+		configuration.addExposedHeader("Authorization");
+		configuration.setAllowCredentials(false);
+		configuration.setMaxAge(3600L);
+
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		source.registerCorsConfiguration("/**", configuration);
+		return source;
 	}
 }
