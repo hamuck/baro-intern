@@ -30,8 +30,8 @@ public class JwtFilter extends OncePerRequestFilter {
 	private static final List<String> WHITE_LIST = List.of(
 		"/swagger-ui/", "/swagger-ui.html", "/swagger-ui/index.html",
 		"/v3/api-docs/", "/v3/api-docs.yaml", "/swagger-resources/", "/v3/api-docs",
-		"/v3/api-docs/swagger-config",  // 추가 ✅
-		"/login", "/signup", "/public","/v3/api-docs/swagger-config"
+		"/v3/api-docs/swagger-config",
+		"/login", "/signup","/v3/api-docs/swagger-config"
 	);
 
 
