@@ -1,10 +1,6 @@
 package com.example.barointern.global.jwt;
 
-import static com.example.barointern.global.constans.Constans.AUTHORIZATION;
-import static com.example.barointern.global.constans.Constans.BEARER;
-import static com.example.barointern.global.constans.Constans.REFRESH_TOKEN;
-import static com.example.barointern.global.constans.Constans.REFRESH_TOKEN_EXPIRATION;
-
+import static com.example.barointern.global.constans.Constans.*;
 
 import com.example.barointern.domain.user.User;
 import com.example.barointern.domain.user.UserRepository;
@@ -14,7 +10,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Collections;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -23,7 +19,6 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-
 @Slf4j
 @Component
 public class JwtFilter extends OncePerRequestFilter {
@@ -31,17 +26,32 @@ public class JwtFilter extends OncePerRequestFilter {
 	private final JwtProvider jwtProvider;
 	private final UserRepository userRepository;
 
-	public JwtFilter(JwtProvider jwtProvider, UserRepository userRepository){
+	// JWT 필터가 적용되지 않을 API 화이트리스트
+	private static final List<String> WHITE_LIST = List.of(
+		"/swagger-ui/", "/swagger-ui.html", "/swagger-ui/index.html",
+		"/v3/api-docs/", "/v3/api-docs.yaml", "/swagger-resources/", "/v3/api-docs",
+		"/v3/api-docs/swagger-config",
+		"/login", "/signup","/v3/api-docs/swagger-config"
+	);
+
+
+	public JwtFilter(JwtProvider jwtProvider, UserRepository userRepository) {
 		this.jwtProvider = jwtProvider;
 		this.userRepository = userRepository;
 	}
 
 	@Override
+	protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+		String path = request.getRequestURI();
+		boolean shouldSkip = WHITE_LIST.stream().anyMatch(path::startsWith);
+
+		log.debug("Request URI: {}, Should Skip JWT Filter: {}", path, shouldSkip);
+		return shouldSkip;
+	}
+
+	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
 		FilterChain chain) throws ServletException, IOException {
-
-		String requestPath = request.getRequestURI();
-		String method = request.getMethod();
 
 		// Access Token과 Refresh Token을 가져오기
 		String accessToken = request.getHeader(AUTHORIZATION);
@@ -52,12 +62,10 @@ public class JwtFilter extends OncePerRequestFilter {
 
 		try {
 			if (accessToken != null) {
-
 				// Access Token이 유효한 경우, 인증 정보 설정
 				if (jwtProvider.validationAccessToken(accessToken)) {
 					setAuthentication(accessToken, request);
 				}
-
 				// Access Token이 만료되었고 Refresh Token이 유효한 경우, 새로운 Access Token 발급
 				else if (refreshToken != null && jwtProvider.validationRefreshToken(refreshToken)) {
 					String userId = jwtProvider.extractUserIdFromRefresh(refreshToken);
@@ -92,7 +100,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
 		if (user.getUserRole() != null) {
 			UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-				username, null, Collections.singletonList(new SimpleGrantedAuthority(user.getUserRole().toString())));
+				username, null, List.of(new SimpleGrantedAuthority(user.getUserRole().toString())));
 			authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 			SecurityContextHolder.getContext().setAuthentication(authentication);
 			log.debug("Authentication set for user: {}", username);
