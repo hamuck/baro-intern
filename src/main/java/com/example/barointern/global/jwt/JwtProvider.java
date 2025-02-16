@@ -10,7 +10,6 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
 import java.util.Date;
 import javax.crypto.SecretKey;
 import org.springframework.stereotype.Component;
@@ -19,9 +18,9 @@ import org.springframework.stereotype.Component;
 public class JwtProvider {
 	SecretKey secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
 
-	public String generateAccessToken(String email, Long userId) {
+	public String generateAccessToken(String username, Long userId) {
 		return Jwts.builder()
-			.setSubject(email)
+			.setSubject(username)
 			.claim("userId", userId)
 			.setIssuedAt(new Date())
 			.setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRATION))
@@ -55,15 +54,11 @@ public class JwtProvider {
 		}
 	}
 
-	public Long extractUserId(String token) {
-		return extractClaims(token).get("userId", Long.class);
-	}
-
 	public String extractUserIdFromRefresh(String token) {
 		return extractClaims(token).getSubject();
 	}
 
-	public String extractEmail(String token) {
+	public String extractUsername(String token) {
 		return extractClaims(token).getSubject();
 	}
 
@@ -79,13 +74,13 @@ public class JwtProvider {
 		return !claims.getExpiration().before(new Date());
 	}
 
-	public String regenerateAccessToken(String refreshToken, String email) {
+	public String regenerateAccessToken(String refreshToken, String username) {
 		if (!validationRefreshToken(refreshToken)) {
 			throw new RuntimeException("토큰이 만료되었습니다.");
 		}
 		Claims claims = extractClaims(refreshToken);
 		Long userId = Long.parseLong(claims.getSubject());
-		return generateAccessToken(email, userId);
+		return generateAccessToken(username, userId);
 	}
 
 	public Cookie createHttpOnlyCookie(String name, String value, int maxAge) {

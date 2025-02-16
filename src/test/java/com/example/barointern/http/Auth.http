@@ -1,0 +1,23 @@
+### 회원가입
+POST localhost:8080/signup
+Content-Type: application/json
+
+{
+  "username" : "YEJIN",
+  "password" : "asdf1234!@",
+  "nickname" : "예진"
+}
+
+### 로그인 요청
+POST http://localhost:8080/login
+Content-Type: application/json
+
+{
+  "username": "YEJIN",
+  "password": "asdf1234!@"
+}
+
+> {%
+  client.global.set("token",response.body.data);
+  client.log("Token saved: " + client.global.get("token"));
+%}
