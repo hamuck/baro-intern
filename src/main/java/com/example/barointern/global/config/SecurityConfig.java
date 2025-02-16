@@ -3,8 +3,12 @@ package com.example.barointern.global.config;
 import com.example.barointern.global.jwt.JwtFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -21,8 +25,10 @@ public class SecurityConfig {
 		http
 			.csrf(csrf -> csrf.disable()) // CSRF 보호 비활성화
 			.authorizeHttpRequests(auth -> auth
-				.requestMatchers("/login", "/signup").permitAll()
-				.anyRequest().authenticated()) // 그 외 모든 요청은 인증 필요
+				.requestMatchers("/login", "/signup", "/swagger-ui/**", "/v3/api-docs/**", "/health-check")
+				.permitAll()
+				.anyRequest()
+				.authenticated()) // 그 외 모든 요청은 인증 필요
 			.sessionManagement(session -> session
 				.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // JWT를 사용하므로 세션 비활성화
 			.formLogin(form -> form.disable()) // 기본 폼 로그인 비활성화
@@ -30,5 +36,16 @@ public class SecurityConfig {
 			.addFilterBefore(jwtFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class); // JWT 필터를 인증 필터 앞에 추가
 
 		return http.build();
+	}
+
+	@Bean
+	public PasswordEncoder passwordEncoder(){
+		return new BCryptPasswordEncoder();
+	}
+
+	@Bean
+	public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig)
+		throws Exception {
+		return authConfig.getAuthenticationManager();
 	}
 }

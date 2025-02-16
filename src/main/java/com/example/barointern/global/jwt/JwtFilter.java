@@ -14,8 +14,10 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Collections;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
@@ -63,7 +65,7 @@ public class JwtFilter extends OncePerRequestFilter {
 					User user = userRepository.findByIdOrElseThrow(Long.valueOf(userId));
 
 					// 새 Access Token 발급
-					String newAccessToken = jwtProvider.regenerateAccessToken(refreshToken, user.getEmail());
+					String newAccessToken = jwtProvider.regenerateAccessToken(refreshToken, user.getUsername());
 
 					// 응답 헤더에 새 Access Token 설정
 					response.setHeader(AUTHORIZATION, BEARER + newAccessToken);
@@ -85,15 +87,16 @@ public class JwtFilter extends OncePerRequestFilter {
 	}
 
 	private void setAuthentication(String token, HttpServletRequest request) {
-		String email = jwtProvider.extractEmail(token);
+		String username = jwtProvider.extractUsername(token);
+		User user = userRepository.findByUsernameOrElseThrow(username);
 
-		UsernamePasswordAuthenticationToken authentication =
-			new UsernamePasswordAuthenticationToken(email, null, null);
-
-		authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-		SecurityContextHolder.getContext().setAuthentication(authentication);
-
-		log.debug("Authentication set for user: {}", email);
+		if (user.getUserRole() != null) {
+			UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+				username, null, Collections.singletonList(new SimpleGrantedAuthority(user.getUserRole().toString())));
+			authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+			SecurityContextHolder.getContext().setAuthentication(authentication);
+			log.debug("Authentication set for user: {}", username);
+		}
 	}
 
 	private String getCookie(HttpServletRequest request, String cookieName) {

@@ -1,5 +1,6 @@
 package com.example.barointern.domain.user;
 
+import com.example.barointern.global.enums.UserRole;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -17,16 +18,22 @@ public class User {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@Column(name = "email", unique = true, nullable = false)
-	@Size(max = 30, message = "이 필드는 최대 {max}자까지 가능합니다.")
-	private String email;
+	@Column(name = "username", unique = true, nullable = false)
+	private String username;
 
 	@Column(nullable = false)
 	private String password;
 
-	public User(String email, String password) {
-		this.email = email;
+	@Column(nullable = false)
+	private String nickname;
+
+	private UserRole userRole;
+
+	public User(String username, String password, String nickname) {
+		this.username = username;
 		this.password = password;
+		this.nickname = nickname;
+		this.userRole = UserRole.USER;
 	}
 
 	public User() {}
